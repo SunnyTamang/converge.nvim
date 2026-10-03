@@ -4,7 +4,7 @@ local jsonfile = require("converge.jsonfile")
 local M = {}
 
 ---Bump when the snapshot shape changes.
-M.VERSION = 3
+M.VERSION = 4
 
 ---@return string
 function M.dir()

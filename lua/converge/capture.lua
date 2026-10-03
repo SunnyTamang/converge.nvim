@@ -30,8 +30,10 @@ end
 ---@return table|nil snapshot
 ---@return string|nil err
 function M.capture(name, background)
-  -- Setting 'background' while g:colors_name is set reloads that scheme.
-  vim.g.colors_name = nil
+  -- Start from Neovim's defaults: many themes only run `:hi clear` when g:colors_name is
+  -- set, and would otherwise keep groups from the current mix. `:hi clear` also unsets
+  -- g:colors_name, so setting 'background' below does not reload any scheme.
+  vim.cmd("hi clear")
   vim.o.background = background
 
   local ok, err = pcall(vim.cmd.colorscheme, name)

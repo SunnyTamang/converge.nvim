@@ -210,4 +210,13 @@ T["a cache that cannot be written still renders and warns once"] = function()
   eq(notes[1].msg:find("could not write the cache", 1, true) ~= nil, true)
 end
 
+T["a theme that skips :hi clear does not inherit the previous mix"] = function()
+  use({ ui = "alpha" })
+  -- converge now holds alpha's @string as plain attributes, not as a link.
+  child.lua("require('converge').setup({ recipe = { ui = 'alpha', syntax = 'noclear' } })")
+  child.cmd("colorscheme converge")
+  H.wait_for(child, 'vim.api.nvim_get_hl(0, { name = "String" }).fg == 0x700004')
+  eq(H.hl(child, "@string").fg, 0x700004)
+end
+
 return T
