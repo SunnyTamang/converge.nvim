@@ -71,6 +71,20 @@ A group you name yourself always keeps its own override.
 
 Overrides always come from your config, even when you saved a recipe with `s`.
 To find a group's name, put the cursor on the text and run `:Inspect`.
+
+Theme or group names with `-`, `.`, or a leading `@` must be written in brackets and quotes,
+because Lua would read `kanagawa-dragon = ...` as a subtraction:
+
+```lua
+from = {
+  ["kanagawa-dragon"] = { "Comment" },   -- not: kanagawa-dragon = { ... }
+},
+set = {
+  ["@string"] = { fg = "#a3be8c" },      -- not: @string = { ... }
+},
+```
+
+Plain names like `nord` work both ways: `nord = { ... }` and `["nord"] = { ... }` are the same.
 Plugins that force their colors in a `ColorScheme` autocmd can win over `set` (as with any color scheme).
 
 ## Picker
