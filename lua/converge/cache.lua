@@ -4,7 +4,7 @@ local jsonfile = require("converge.jsonfile")
 local M = {}
 
 ---Bump when the snapshot shape changes.
-M.VERSION = 4
+M.VERSION = 5
 
 ---@return string
 function M.dir()
@@ -87,6 +87,7 @@ function M.read(name, background)
     or snap.name ~= name
     or (snap.background ~= "dark" and snap.background ~= "light")
     or type(snap.groups) ~= "table"
+    or type(snap.links) ~= "table"
     or type(snap.terminal) ~= "table"
     or type(snap.source) ~= "table"
     or type(snap.source.path) ~= "string"

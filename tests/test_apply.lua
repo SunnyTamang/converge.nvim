@@ -219,4 +219,122 @@ T["a theme that skips :hi clear does not inherit the previous mix"] = function()
   eq(H.hl(child, "@string").fg, 0x700004)
 end
 
+T["overrides: from and set go on top of the slices"] = function()
+  use({
+    ui = "alpha",
+    overrides = {
+      from = { beta = { "Comment", "Function" } },
+      set = { Function = { fg = "#123456" }, MyGroup = { fg = "#abcdef" } },
+    },
+  })
+  eq(H.hl(child, "Comment"), { fg = H.color(0x20, 3), italic = true })
+  eq(H.hl(child, "Function"), { fg = 0x123456 })
+  eq(H.hl(child, "MyGroup"), { fg = 0xabcdef })
+  eq(H.hl(child, "String"), { fg = H.color(0x10, 4) })
+  eq(H.notes(child), {})
+end
+
+T["overrides: a from theme that is not installed warns, the rest applies"] = function()
+  use({ ui = "alpha", overrides = { from = { nope = { "Comment" }, beta = { "String" } } } })
+  eq(H.hl(child, "Comment").fg, H.color(0x10, 3))
+  eq(H.hl(child, "String").fg, H.color(0x20, 4))
+  local notes = H.notes(child)
+  eq(#notes, 1)
+  eq(notes[1].msg:find("theme 'nope' failed to load", 1, true) ~= nil, true)
+end
+
+T["overrides: a from group the theme lacks warns once"] = function()
+  use({ ui = "alpha", overrides = { from = { beta = { "Nope" } } } })
+  local notes = H.notes(child)
+  eq(#notes, 1)
+  eq(notes[1].msg, "converge: overrides.from: group 'Nope' not found in theme 'beta'")
+end
+
+T["overrides: a bad set value warns, other set groups still apply"] = function()
+  use({
+    ui = "alpha",
+    overrides = { set = { Function = { fg = "notacolor" }, MyGroup = { fg = "#abcdef" } } },
+  })
+  eq(H.hl(child, "MyGroup"), { fg = 0xabcdef })
+  eq(H.hl(child, "Function").fg, H.color(0x10, 5))
+  eq(child.lua_get("vim.g.colors_name"), "converge")
+  local notes = H.notes(child)
+  eq(#notes, 1)
+  eq(notes[1].msg:find("overrides.set: could not apply 'Function'", 1, true) ~= nil, true)
+end
+
+T["overrides: from themes use the ui theme's background"] = function()
+  use({ ui = "lightui", overrides = { from = { bgaware = { "Comment" } } } })
+  eq(H.hl(child, "Comment").fg, H.color(0x50, 3))
+end
+
+T["overrides: config overrides apply even when a saved recipe exists"] = function()
+  child.lua([[require("converge.store").write({ ui = "alpha" })]])
+  use({ ui = "gamma", overrides = { from = { beta = { "Comment" } } } })
+  eq(H.hl(child, "Normal").fg, H.color(0x10, 1))
+  eq(H.hl(child, "Comment").fg, H.color(0x20, 3))
+end
+
+T["overrides: cold cache loads from themes on the next tick"] = function()
+  child.lua([[require("converge").setup({ recipe = {
+    ui = "alpha", overrides = { from = { beta = { "Comment" } } },
+  } })]])
+  child.lua("vim.cmd.colorscheme('converge'); _G.after = vim.g.colors_name")
+  eq(child.lua_get("_G.after") ~= "converge", true)
+  H.wait_active(child)
+  eq(H.hl(child, "Comment").fg, H.color(0x20, 3))
+end
+
+T["overrides: refresh captures from themes again"] = function()
+  use({ ui = "alpha", overrides = { from = { beta = { "Comment" } } } })
+  child.lua("vim.g.fixture_loads = 0")
+  child.cmd("Converge refresh")
+  H.wait_for(child, "(vim.g.fixture_loads or 0) >= 2")
+  eq(child.lua_get("vim.g.fixture_loads"), 2)
+  eq(child.lua_get("vim.g.colors_name"), "converge")
+  eq(H.hl(child, "Normal").fg, H.color(0x10, 1))
+  eq(H.hl(child, "Comment").fg, H.color(0x20, 3))
+end
+
+T["overrides: groups linking to a from group follow it"] = function()
+  use({ ui = "alpha", overrides = { from = { beta = { "Comment" } } } })
+  for _, group in ipairs({ "Comment", "@comment", "@lsp.type.comment", "CursorLineNr" }) do
+    eq(H.hl(child, group).fg, H.color(0x20, 3))
+  end
+end
+
+T["overrides: groups linking to a set group follow it"] = function()
+  use({ ui = "alpha", overrides = { set = { Comment = { fg = "#123456" } } } })
+  for _, group in ipairs({ "Comment", "@comment", "@lsp.type.comment", "CursorLineNr" }) do
+    eq(H.hl(child, group).fg, 0x123456)
+  end
+end
+
+T["overrides: the closest override on a link chain wins"] = function()
+  use({
+    ui = "alpha",
+    overrides = { from = { beta = { "Comment" } }, set = { ["@comment"] = { fg = "#123456" } } },
+  })
+  eq(H.hl(child, "Comment").fg, H.color(0x20, 3))
+  eq(H.hl(child, "@comment").fg, 0x123456)
+  eq(H.hl(child, "@lsp.type.comment").fg, 0x123456)
+  eq(H.hl(child, "CursorLineNr").fg, H.color(0x20, 3))
+end
+
+T["overrides: a set link to one of its own followers keeps that follower's colors"] = function()
+  use({ ui = "alpha", overrides = { set = { Comment = { link = "@comment" } } } })
+  eq(H.hl(child, "@comment").fg, H.color(0x10, 3))
+  eq(H.hl(child, "@lsp.type.comment").fg, H.color(0x10, 3))
+  eq(H.hl(child, "Comment").fg, H.color(0x10, 3))
+  eq(#H.notes(child), 0)
+end
+
+T["overrides: a bad set value leaves its followers alone"] = function()
+  use({ ui = "alpha", overrides = { set = { Comment = { fg = "notacolor" } } } })
+  eq(H.hl(child, "@lsp.type.comment").fg, H.color(0x10, 3))
+  local notes = H.notes(child)
+  eq(#notes, 1)
+  eq(notes[1].msg:find("overrides.set: could not apply 'Comment'", 1, true) ~= nil, true)
+end
+
 return T

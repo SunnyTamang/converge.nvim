@@ -43,6 +43,36 @@ vim.cmd.colorscheme("converge")
 Slices: `ui`, `syntax`, `diagnostics`, `git`, `terminal`, `plugins`.
 A slice you leave out uses the `ui` theme.
 
+## Overrides
+
+Change single highlight groups on top of the slices. Write them in your config:
+
+```lua
+recipe = {
+  ui = "kanagawa-dragon",
+  syntax = "kanagawa",
+  overrides = {
+    from = {                                 -- take groups from another theme
+      nord = { "Comment" },
+    },
+    set = {                                  -- your own colors (nvim_set_hl format)
+      Visual = { bg = "#2d4f67" },
+    },
+  },
+}
+```
+
+Order: slices, then `from`, then `set`. If a group is in both, `set` wins.
+
+Groups that link to an overridden group in their theme follow it. In the example,
+`@comment` and `@lsp.type.comment` (which link to `Comment` in most themes) get nord's
+comment color too. UI groups follow the same way, for example `CursorLineNr -> Comment`.
+A group you name yourself always keeps its own override.
+
+Overrides always come from your config, even when you saved a recipe with `s`.
+To find a group's name, put the cursor on the text and run `:Inspect`.
+Plugins that force their colors in a `ColorScheme` autocmd can win over `set` (as with any color scheme).
+
 ## Picker
 
 `:Converge` opens the picker.
@@ -55,7 +85,8 @@ A slice you leave out uses the `ui` theme.
 | `y` | copy the recipe as Lua | |
 | `q` | close (undo unsaved) | close (undo unsaved) |
 
-A saved recipe wins over the one in `setup()`.
+A saved recipe's slices win over the ones in `setup()`; overrides always come from `setup()`.
+The `overrides` line in the slice list is read-only (edit overrides in your config).
 
 ## Commands
 

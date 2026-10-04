@@ -110,4 +110,44 @@ T["wait_for() returns when true and errors on timeout"] = function()
   eq(err:find("timed out waiting for: vim.g.never == true", 1, true) ~= nil, true)
 end
 
+T["setup() keeps overrides; resolve() takes them from setup even with a saved recipe"] = function()
+  child.lua([[require("converge").setup({ recipe = {
+    ui = "alpha", overrides = { from = { beta = { "Comment" } } },
+  } })]])
+  child.lua([[require("converge.store").write({
+    ui = "gamma", overrides = { from = { gamma = { "String" } } },
+  })]])
+  local r = child.lua_get([[require("converge.config").resolve()]])
+  eq(r.ui, "gamma")
+  eq(r.syntax, "gamma")
+  eq(r.overrides.from, { beta = { "Comment" } })
+  eq(warnings(), {})
+end
+
+T["slices_of() drops overrides"] = function()
+  local s = child.lua_get(
+    [[require("converge.config").slices_of(
+    require("converge.config").complete({ ui = "alpha", overrides = { from = { beta = { "Comment" } } } }))]]
+  )
+  eq(s.overrides, nil)
+  eq(s.ui, "alpha")
+  eq(s.plugins, "alpha")
+end
+
+T["to_lua() round-trips overrides"] = function()
+  local text = child.lua_get([[require("converge.config").to_lua(
+    require("converge.config").complete({
+      ui = "alpha",
+      overrides = {
+        from = { ["kanagawa-dragon"] = { "Comment", "@comment" } },
+        set = { Visual = { bg = "#2d4f67" }, ["@string"] = { fg = "#ffffff", italic = true } },
+      },
+    }))]])
+  local loaded = loadstring("return {" .. text .. "}")()
+  eq(loaded.recipe.ui, "alpha")
+  eq(loaded.recipe.overrides.from["kanagawa-dragon"], { "Comment", "@comment" })
+  eq(loaded.recipe.overrides.set.Visual, { bg = "#2d4f67" })
+  eq(loaded.recipe.overrides.set["@string"], { fg = "#ffffff", italic = true })
+end
+
 return T

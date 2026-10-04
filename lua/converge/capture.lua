@@ -42,9 +42,13 @@ function M.capture(name, background)
   end
 
   -- nvim_get_hl(0, {}) keeps links; resolve each group so a slice keeps its source look
-  -- even when a link points into another slice.
-  local groups = {}
-  for group in pairs(vim.api.nvim_get_hl(0, {})) do
+  -- even when a link points into another slice. Keep the raw links too: overrides follow
+  -- them (a group that links to an overridden group gets the same color).
+  local groups, links = {}, {}
+  for group, raw in pairs(vim.api.nvim_get_hl(0, {})) do
+    if raw.link then
+      links[group] = raw.link
+    end
     local attrs = vim.api.nvim_get_hl(0, { name = group, link = false })
     attrs.default = nil
     -- nvim_get_hl omits an empty cterm. Replaying a group without it makes Neovim derive
@@ -64,6 +68,7 @@ function M.capture(name, background)
     background = vim.o.background,
     source = source_of(name),
     groups = groups,
+    links = links,
     terminal = terminal,
   },
     nil

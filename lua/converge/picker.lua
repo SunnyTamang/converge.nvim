@@ -1,6 +1,7 @@
 ---Floating picker: choose a theme per slice, with live preview.
 local config = require("converge.config")
 local log = require("converge.log")
+local overrides = require("converge.overrides")
 local preview = require("converge.preview")
 local slices = require("converge.slices")
 local store = require("converge.store")
@@ -42,6 +43,11 @@ local function show_slices()
     if name == state.slice then
       row = i
     end
+  end
+  -- Overrides are edited in the config only; show them as one read-only line.
+  local from_n, set_n = overrides.counts(state.recipe.overrides)
+  if from_n + set_n > 0 then
+    table.insert(lines, string.format(" %-12s %d from, %d set", "overrides", from_n, set_n))
   end
   set_lines(state.buf, lines)
   set_frame("Slices", "s save  q quit")
@@ -89,7 +95,10 @@ end
 
 local function on_enter()
   if state.mode == "slices" then
-    show_themes(slices.names[vim.api.nvim_win_get_cursor(state.win)[1]])
+    local slice = slices.names[vim.api.nvim_win_get_cursor(state.win)[1]]
+    if slice then -- nil on the read-only overrides line
+      show_themes(slice)
+    end
   else
     show_slices() -- keep the current choice
   end
@@ -110,7 +119,7 @@ local function on_save()
   if state.mode ~= "slices" then
     return
   end
-  local ok, err = pcall(store.write, state.recipe)
+  local ok, err = pcall(store.write, config.slices_of(state.recipe))
   if not ok then
     return log.warn("could not save the recipe: " .. tostring(err))
   end

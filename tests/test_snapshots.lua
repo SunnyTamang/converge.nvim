@@ -28,7 +28,11 @@ T["capture resolves links and reads terminal colors"] = function()
   local snap = get("alpha", "dark", true)
   eq(snap.name, "alpha")
   eq(snap.background, "dark")
-  eq(snap.version, 4)
+  eq(snap.version, 5)
+  eq(snap.links["@string"], "String")
+  eq(snap.links["@lsp.type.comment"], "@comment")
+  eq(snap.links["@comment"], "Comment")
+  eq(snap.links.Comment, nil)
   eq(snap.groups.Comment, { fg = H.color(0x10, 3), italic = true, cterm = {} })
   eq(snap.groups["@string"], { fg = H.color(0x10, 4), cterm = {} })
   eq(snap.groups.CursorLineNr, { fg = H.color(0x10, 3), italic = true, cterm = {} })
@@ -135,6 +139,7 @@ local MALFORMED = {
   ["a missing background"] = "local snap = ...; snap.background = nil",
   ["a background that is not dark or light"] = "local snap = ...; snap.background = 'blue'",
   ["groups that are not a table"] = "local snap = ...; snap.groups = 'x'",
+  ["links that are not a table"] = "local snap = ...; snap.links = 'x'",
   ["terminal colors that are not a table"] = "local snap = ...; snap.terminal = 3",
   ["another theme's name"] = "local snap = ...; snap.name = 'beta'",
 }

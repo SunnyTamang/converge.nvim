@@ -337,4 +337,61 @@ T["footer shows the keys for each list"] = function()
   eq(footer(), " s save  q quit ")
 end
 
+local function with_overrides()
+  child.lua([[require("converge").setup({ recipe = {
+    ui = "alpha",
+    overrides = {
+      from = { beta = { "Comment", "@comment" } },
+      set = { MyGroup = { fg = "#abcdef" } },
+    },
+  } })]])
+  child.cmd("colorscheme converge")
+  H.wait_for(
+    child,
+    string.format('vim.api.nvim_get_hl(0, { name = "Comment" }).fg == %d', H.color(0x20, 3))
+  )
+end
+
+T["shows a read-only overrides line"] = function()
+  with_overrides()
+  child.cmd("Converge")
+  local l = lines()
+  eq(#l, 7)
+  eq(l[7]:match("^%s*overrides%s+2 from, 1 set$") ~= nil, true)
+  child.type_keys("G", "<CR>")
+  eq(footer(), " s save  q quit ")
+  eq(#lines(), 7)
+end
+
+T["no overrides line without overrides"] = function()
+  child.cmd("Converge")
+  eq(#lines(), 6)
+end
+
+T["previews keep the overrides"] = function()
+  with_overrides()
+  pick_syntax("gamma")
+  eq(H.hl(child, "String").fg, H.color(0x30, 4))
+  eq(H.hl(child, "Comment").fg, H.color(0x20, 3))
+  eq(H.hl(child, "MyGroup"), { fg = 0xabcdef })
+end
+
+T["s saves slices only"] = function()
+  with_overrides()
+  child.cmd("Converge")
+  child.type_keys("s", "q")
+  eq(child.lua_get([[require("converge.store").read().ui]]), "alpha")
+  eq(child.lua_get([[require("converge.store").read().overrides]]), vim.NIL)
+end
+
+T["y copies the overrides"] = function()
+  with_overrides()
+  child.cmd("Converge")
+  child.type_keys("y")
+  local text = child.lua_get([[vim.fn.getreg('"')]])
+  local loaded = loadstring("return {" .. text .. "}")()
+  eq(loaded.recipe.overrides.from.beta, { "Comment", "@comment" })
+  eq(loaded.recipe.overrides.set.MyGroup, { fg = "#abcdef" })
+end
+
 return T
