@@ -27,9 +27,12 @@ Requires Neovim 0.10 or newer. No dependencies.
 
 ![Your pick survives a restart, :Converge reset goes back to your config](demo/part5.gif)
 
-## Install
+## Installation
 
-With [lazy.nvim](https://github.com/folke/lazy.nvim):
+converge.nvim works with any plugin manager. Install your themes as usual, then load
+converge after them.
+
+### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
 ```lua
 {
@@ -45,9 +48,62 @@ With [lazy.nvim](https://github.com/folke/lazy.nvim):
 },
 ```
 
-Themes in the recipe work even when lazy.nvim loads them lazily: converge loads them with
-`:colorscheme`, which lets lazy.nvim load the theme's plugin first. The picker also lists
-lazy themes that are not loaded yet.
+<details>
+  <summary>packer.nvim</summary>
+
+```lua
+use({
+  "sunnytamang/converge.nvim",
+  config = function()
+    require("converge").setup({
+      recipe = { ui = "tokyonight-night", syntax = "catppuccin-mocha" },
+    })
+    vim.cmd.colorscheme("converge")
+  end,
+})
+```
+
+</details>
+
+<details>
+  <summary>vim-plug</summary>
+
+```vim
+Plug 'sunnytamang/converge.nvim'
+
+" after call plug#end()
+lua << EOF
+require("converge").setup({
+  recipe = { ui = "tokyonight-night", syntax = "catppuccin-mocha" },
+})
+EOF
+colorscheme converge
+```
+
+</details>
+
+<details>
+  <summary>vim.pack (Neovim 0.12+)</summary>
+
+```lua
+vim.pack.add({ "https://github.com/sunnytamang/converge.nvim" })
+
+require("converge").setup({
+  recipe = { ui = "tokyonight-night", syntax = "catppuccin-mocha" },
+})
+vim.cmd.colorscheme("converge")
+```
+
+</details>
+
+### Notes
+
+- **Order:** run `setup()` and `colorscheme converge` after your themes are installed and
+  their own `setup()` (if any) has run, so converge reads your version of each theme.
+- **Lazy-loaded themes:** converge reads themes with `:colorscheme`, which also finds
+  themes in optional packages and lets lazy.nvim load a theme's plugin first, so recipes
+  work with lazy-loaded themes. The picker lists themes that lazy.nvim has not loaded yet;
+  with other managers, a theme shows up in the picker once it has been loaded.
 
 ## Setup
 
@@ -108,6 +164,44 @@ set = {
 
 Plain names like `nord` work both ways: `nord = { ... }` and `["nord"] = { ... }` are the same.
 Plugins that force their colors in a `ColorScheme` autocmd can win over `set` (as with any color scheme).
+
+### Common groups
+
+Plain Neovim has about 380 highlight groups, and plugins add more. Any of them can be
+overridden. Some common ones:
+
+| Area | Groups | What they color |
+|---|---|---|
+| Editor | `Normal`, `NormalFloat`, `FloatBorder` | Text and background, floating windows, their borders |
+| Cursor and lines | `CursorLine`, `CursorLineNr`, `LineNr`, `SignColumn` | Current line, its number, other line numbers, sign column |
+| Selection and search | `Visual`, `Search`, `IncSearch`, `MatchParen` | Selected text, search matches, matching bracket |
+| Statusline and tabs | `StatusLine`, `StatusLineNC`, `TabLine`, `TabLineSel`, `WinSeparator` | Statusline (active, inactive), tabs, window borders |
+| Popup menu | `Pmenu`, `PmenuSel` | Completion menu, selected item |
+| Code | `Comment`, `String`, `Function`, `Keyword`, `Type`, `Constant`, `Number` | Code colors |
+| Code (treesitter) | `@comment`, `@string`, `@function`, `@keyword`, `@variable` | Code colors from treesitter (most of them link to the groups above) |
+| Diagnostics | `DiagnosticError`, `DiagnosticWarn`, `DiagnosticUnderlineError`, `DiagnosticVirtualTextError` | Errors and warnings |
+| Git and diff | `Added`, `Changed`, `Removed`, `DiffAdd`, `DiffChange`, `DiffDelete` | Git signs and diff views |
+| Other | `Folded`, `Title`, `NonText`, `EndOfBuffer` | Folds, titles, invisible characters, `~` after the last line |
+
+### Find a group and override it
+
+1. **Find the name.**
+   - For text in a buffer: put the cursor on it and run `:Inspect`. It lists the groups
+     coloring that spot (treesitter, semantic tokens from your language server, syntax).
+     The top one wins.
+   - For editor parts you cannot put the cursor on (statusline, popup menu, selection):
+     look them up with `:help highlight-groups`, or search all groups with
+     `:filter /Pmenu/ highlight` (replace `Pmenu` with part of the name).
+2. **Add it to your recipe**, from another theme or with your own colors:
+
+   ```lua
+   overrides = {
+     from = { nord = { "Comment" } },
+     set = { PmenuSel = { bg = "#2d4f67", bold = true } },
+   },
+   ```
+
+3. **Apply it:** save your config and run `:colorscheme converge` (or restart Neovim).
 
 ## Picker
 
