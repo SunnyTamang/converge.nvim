@@ -5,6 +5,28 @@ another, terminal colors from a third. Pick with a live preview.
 
 Requires Neovim 0.10 or newer. No dependencies.
 
+## Demo
+
+### Take code colors from another theme
+
+![Take code colors from another theme](demo/part1.gif)
+
+### Take the editor UI from another theme
+
+![Take the editor UI from another theme](demo/part2.gif)
+
+### Change single colors with overrides
+
+![Change single colors with overrides](demo/part3.gif)
+
+### Pick and preview themes live with :Converge
+
+![Pick and preview themes live with :Converge](demo/part4.gif)
+
+### Your pick survives a restart, :Converge reset goes back to your config
+
+![Your pick survives a restart, :Converge reset goes back to your config](demo/part5.gif)
+
 ## Install
 
 With [lazy.nvim](https://github.com/folke/lazy.nvim):
