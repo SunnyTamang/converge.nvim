@@ -1,0 +1,225 @@
+*converge.txt*  Mix parts of installed colorschemes into one
+
+                                 CONVERGE.NVIM
+
+Pick a different installed colorscheme for each part of the editor and
+combine them into one colorscheme named `converge`. Syntax from one theme,
+editor UI from another, terminal colors from a third. Pick with a live
+preview, and change single highlight groups with overrides.
+                                                    *converge* *converge.nvim*
+
+Requires Neovim 0.10 or newer. No dependencies.
+
+==============================================================================
+CONTENTS                                                   *converge-contents*
+
+  1. Setup ...................................................|converge-setup|
+  2. Recipe .................................................|converge-recipe|
+  3. Slices .................................................|converge-slices|
+  4. Overrides ...........................................|converge-overrides|
+  5. Highlight groups .......................................|converge-groups|
+  6. Picker .................................................|converge-picker|
+  7. Commands .............................................|converge-commands|
+  8. Files and cache .........................................|converge-files|
+
+==============================================================================
+1. SETUP                                                      *converge-setup*
+
+Call `setup()` with a recipe, then load the colorscheme. Do this after your
+themes are installed and after their own `setup()` (if any), so converge reads
+your version of each theme.
+>lua
+    require("converge").setup({
+      recipe = {
+        ui = "kanagawa-dragon",
+        syntax = "catppuccin",
+      },
+    })
+    vim.cmd.colorscheme("converge")
+<
+Themes in the recipe may be lazy-loaded: converge reads them with
+|:colorscheme|, which also finds themes in optional packages and lets
+lazy.nvim load a theme's plugin first.
+
+==============================================================================
+2. RECIPE                                                    *converge-recipe*
+
+A recipe maps each slice (|converge-slices|) to an installed colorscheme, and
+may hold overrides (|converge-overrides|):
+>lua
+    recipe = {
+      ui = "kanagawa-dragon",   -- editor: background, statusline, popups
+      syntax = "catppuccin",    -- code colors
+      diagnostics = "kanagawa",
+      git = "kanagawa",
+      terminal = "kanagawa-dragon",
+      plugins = "kanagawa-dragon",
+      overrides = { ... },
+    }
+<
+- A slice you leave out uses the `ui` theme.
+- Without `ui`, the `default` colorscheme is used.
+- Names with `-` or `.` must be written in brackets and quotes when they
+  are table keys, see |converge-overrides|. As values (`ui = "..."`) any
+  name works.
+
+Where the recipe comes from:
+- Slices: a recipe saved in the picker (|converge-picker|) wins over the
+  slices in `setup()`. |:Converge-reset| deletes the saved recipe.
+- Overrides: always from `setup()`, also when a recipe is saved.
+
+==============================================================================
+3. SLICES                                                    *converge-slices*
+
+Every highlight group belongs to exactly one slice.
+
+  Slice         What it colors ~
+  `ui`            Editor: text and background, statusline, line numbers,
+                floating windows, popup menu, selection, search
+  `syntax`        Code: `Comment`, `String`, `Function`, ..., and all
+                treesitter (`@...`) and LSP semantic token groups
+  `diagnostics`   `Diagnostic*` groups: errors, warnings, hints
+  `git`           `GitSigns*`, `Diff*`, `Added`, `Changed`, `Removed`
+  `terminal`      The 16 terminal colors (`g:terminal_color_0` to `15`)
+  `plugins`       Every other group, for example `Telescope*`, `NvimTree*`
+
+The background (|'background'|) comes from the `ui` theme. Other themes are
+read with that background, so a dark `ui` gives the dark version of themes
+that have both.
+
+==============================================================================
+4. OVERRIDES                                              *converge-overrides*
+
+Change single highlight groups on top of the slices:
+>lua
+    overrides = {
+      from = {                              -- groups from another theme
+        nord = { "Comment" },
+      },
+      set = {                               -- your own colors
+        Visual = { bg = "#2d4f67" },
+      },
+    }
+<
+- `from`: theme name -> list of group names to take from that theme.
+- `set`: group name -> attributes, in the format of |nvim_set_hl()|.
+- Order: slices, then `from`, then `set`. If a group is in both, `set` wins.
+
+Groups that link to an overridden group in their theme follow it. With
+`from = { nord = { "Comment" } }`, `@comment` and `@lsp.type.comment` (which
+link to `Comment` in most themes) get nord's comment color too. Groups in
+other slices follow the same way, for example `CursorLineNr -> Comment`. A
+group you name yourself always keeps its own override.
+
+Theme or group names with `-`, `.`, or a leading `@` must be written in
+brackets and quotes, because Lua reads `kanagawa-dragon = ...` as a
+subtraction:
+>lua
+    from = {
+      ["kanagawa-dragon"] = { "Comment" },  -- not: kanagawa-dragon = {...}
+    },
+    set = {
+      ["@string"] = { fg = "#a3be8c" },     -- not: @string = {...}
+    },
+<
+Mistakes never stop startup: a theme that is not installed, a group a theme
+does not have, or a bad `set` value gives one warning and is skipped.
+
+Plugins that force their colors in a |ColorScheme| autocmd can win over
+`set`, as with any colorscheme.
+
+==============================================================================
+5. HIGHLIGHT GROUPS                                          *converge-groups*
+
+Plain Neovim has about 380 highlight groups, and plugins add more. Any of
+them can be overridden. Count the groups in your setup with:
+>vim
+    :lua print(vim.tbl_count(vim.api.nvim_get_hl(0, {})))
+<
+Some common groups:
+
+  Area                  Groups ~
+  Editor                `Normal`, `NormalFloat`, `FloatBorder`
+  Cursor and lines      `CursorLine`, `CursorLineNr`, `LineNr`, `SignColumn`
+  Selection and search  `Visual`, `Search`, `IncSearch`, `MatchParen`
+  Statusline and tabs   `StatusLine`, `StatusLineNC`, `TabLine`, `TabLineSel`,
+                        `WinSeparator`
+  Popup menu            `Pmenu`, `PmenuSel`
+  Code                  `Comment`, `String`, `Function`, `Keyword`, `Type`,
+                        `Constant`, `Number`
+  Code (treesitter)     `@comment`, `@string`, `@function`, `@keyword`,
+                        `@variable`
+  Diagnostics           `DiagnosticError`, `DiagnosticWarn`,
+                        `DiagnosticUnderlineError`
+  Git and diff          `Added`, `Changed`, `Removed`, `DiffAdd`,
+                        `DiffChange`, `DiffDelete`
+  Other                 `Folded`, `Title`, `NonText`, `EndOfBuffer`
+
+Find a group and override it:
+1. Find the name.
+   - For text in a buffer: put the cursor on it and run |:Inspect|. It lists
+     the groups coloring that spot. The top one wins.
+   - For editor parts you cannot put the cursor on (statusline, popup menu,
+     selection): see |highlight-groups|, or search all groups with
+     `:filter /Pmenu/ highlight` (replace `Pmenu` with part of the name).
+2. Add it to `overrides`, with `from` or `set`.
+3. Save your config and run `:colorscheme converge`, or restart Neovim.
+
+==============================================================================
+6. PICKER                                                    *converge-picker*
+
+|:Converge| opens the picker: the slice list on the left and a preview on the
+right, with key hints on the bottom border.
+
+Slice list:
+  <CR>      Pick a theme for the slice under the cursor.
+  s         Save the recipe (slices only).
+  y         Copy the recipe as Lua, ready to paste into `setup()`.
+  q, <Esc>  Close. Unsaved changes are undone.
+
+Theme list:
+  j, k      Move. Every move is a live preview. |/| search works too.
+  <CR>      Keep this theme, back to the slice list.
+  <Esc>     Undo, back to the slice list.
+  q         Close. Unsaved changes are undone.
+
+The `overrides` line in the slice list is read-only. Edit overrides in your
+config.
+
+The picker lists all installed colorschemes. Themes that lazy.nvim has not
+loaded yet are listed too; with other plugin managers, a theme shows up once
+it has been loaded.
+
+==============================================================================
+7. COMMANDS                                                *converge-commands*
+
+:Converge                                                          *:Converge*
+    Open the picker, see |converge-picker|.
+
+:Converge reset                                              *:Converge-reset*
+    Delete the saved recipe. The slices from `setup()` are used again.
+    Overrides do not change.
+
+:Converge refresh                                          *:Converge-refresh*
+    Delete the cache and read all themes of the recipe again. Use it after
+    changing a theme's options, see |converge-files|.
+
+==============================================================================
+8. FILES AND CACHE                                            *converge-files*
+
+  Saved recipe   `stdpath("data")/converge/recipe.json`
+                 Written by `s` in the picker, deleted by |:Converge-reset|.
+  Cache          `stdpath("cache")/converge/<theme>@<background>.json`
+                 One file per theme, deleted by |:Converge-refresh|.
+
+Each theme is read once with |:colorscheme| and its colors are cached, so
+later startups are fast. The cache refreshes when the theme's files change
+(everything in its `colors/` and `lua/` folders).
+
+The first time a theme is used, |ColorScheme| fires once for each theme that
+is read, and the old colors stay for one moment while that happens.
+
+Theme options (for example a `setup()` call of the theme) are not part of its
+files. After changing them, run |:Converge-refresh|.
+
+ vim:tw=78:ts=8:ft=help:norl:
