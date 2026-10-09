@@ -18,6 +18,7 @@ local TAGS = {
   ":Converge",
   ":Converge-reset",
   ":Converge-refresh",
+  "converge-health",
   "converge-files",
 }
 

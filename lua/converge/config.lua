@@ -9,6 +9,9 @@ local M = {}
 ---@type {recipe: table}
 M.options = { recipe = {} }
 
+---True once setup() has run (reported by :checkhealth converge).
+M.configured = false
+
 ---Return a clean copy of `recipe`: only known slices with usable theme names, plus cleaned
 ---`overrides` when `keep_overrides` is true (a saved recipe holds slices only, so its
 ---`overrides` key is dropped without a warning).
@@ -49,6 +52,7 @@ end
 function M.setup(opts)
   opts = opts or {}
   M.options = { recipe = M.validate(opts.recipe or {}, "setup", true) }
+  M.configured = true
 end
 
 ---Fill every slice. A missing slice uses the ui theme; a missing ui uses "default".

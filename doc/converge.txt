@@ -204,6 +204,12 @@ it has been loaded.
     Delete the cache and read all themes of the recipe again. Use it after
     changing a theme's options, see |converge-files|.
 
+:checkhealth converge                                        *converge-health*
+    Check the setup: Neovim version, whether `setup()` ran, where the recipe
+    comes from, whether every theme is installed, whether converge is the
+    active colorscheme, and the cache. Run it first when something looks
+    wrong. It never changes your colors.
+
 ==============================================================================
 8. FILES AND CACHE                                            *converge-files*
 
